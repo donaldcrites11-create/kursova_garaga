@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+import os
+from pathlib import Path
 
 DEFAULT_CSV = "network_edges.csv"
-
 
 def load_edges(csv_path: str) -> pd.DataFrame:
     """Завантажує таблицю каналів зв'язку з CSV-файлу."""
