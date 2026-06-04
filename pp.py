@@ -1,13 +1,7 @@
-from __future__ import annotations
-
-from pathlib import Path
-import argparse
-import sys
-
+import streamlit as st
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
-
 
 DEFAULT_CSV = "network_edges.csv"
 
