@@ -185,49 +185,48 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
+def main():
+    st.title("Пошук оптимального маршруту в мережі")
 
-    try:
-        edges = load_edges(args.file)
-        graph = create_graph(edges)
-
-        print_network_table(edges)
-
-        nodes = sorted(graph.nodes())
-        print("\nДоступні вузли:", ", ".join(nodes))
-
-        start_node = args.start or input("\nВведіть початковий вузол: ").strip()
-        end_node = args.end or input("Введіть кінцевий вузол: ").strip()
-
-        path, weight = find_optimal_route(graph, start_node, end_node)
-        print_result(start_node, end_node, path, weight)
-
-        draw_network(
-            graph,
-            "network_initial.png",
-            title="Початкова мережа з вагами каналів зв'язку"
-        )
-
-        draw_network(
-            graph,
-            "network_optimal_route.png",
-            route=path,
-            title=f"Оптимальний маршрут: {' -> '.join(path)}"
-        )
-
-        print("\nЗбережено рисунки:")
-        print("network_initial.png")
-        print("network_optimal_route.png")
-
-    except nx.NetworkXNoPath:
-        print("Між вибраними вузлами немає доступного маршруту.", file=sys.stderr)
-        sys.exit(1)
-
-    except Exception as error:
-        print(f"Помилка: {error}", file=sys.stderr)
-        sys.exit(1)
-
+    # 1. Завантаження файлу через веб-інтерфейс (замість argparse)
+    uploaded_file = st.file_uploader("Завантажте CSV файл з каналами зв'язку", type="csv")
+    
+    if uploaded_file is not None:
+        try:
+            edges = load_edges(uploaded_file)
+            graph = create_graph(edges)
+            
+            st.subheader("Таблиця каналів зв'язку:")
+            st.dataframe(edges) # Вивід таблиці на екран
+            
+            nodes = sorted(graph.nodes())
+            st.write(f"**Доступні вузли:** {', '.join(nodes)}")
+            
+            # 2. Введення даних через віджети Streamlit (замість input)
+            start_node = st.text_input("Введіть початковий вузол:").strip()
+            end_node = st.text_input("Введіть кінцевий вузол:").strip()
+            
+            # 3. Кнопка для запуску розрахунків
+            if st.button("Знайти маршрут"):
+                if start_node and end_node:
+                    path, weight = find_optimal_route(graph, start_node, end_node)
+                    
+                    st.success(f"Оптимальний маршрут: {' -> '.join(path)}")
+                    st.info(f"Сумарна вага маршруту: {weight:g}")
+                    
+                    # 4. Вивід графіків (замість збереження у файл і print)
+                    st.subheader("Схема мережі")
+                    draw_network(graph, "temp1.png", title="Початкова мережа")
+                    st.image("temp1.png") # Показуємо зображення у браузері
+                    
+                    st.subheader("Оптимальний маршрут")
+                    draw_network(graph, "temp2.png", route=path, title="Знайдений маршрут")
+                    st.image("temp2.png")
+                else:
+                    st.warning("Будь ласка, введіть початковий та кінцевий вузли.")
+                    
+        except Exception as error:
+            st.error(f"Сталася помилка: {error}")
 
 if __name__ == "__main__":
     main()
