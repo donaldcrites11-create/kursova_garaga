@@ -178,49 +178,67 @@ def parse_args() -> argparse.Namespace:
 
     return parser.parse_args()
 
-
 def main():
     st.title("Пошук оптимального маршруту в мережі")
 
-    # 1. Завантаження файлу через веб-інтерфейс (замість argparse)
-    uploaded_file = st.file_uploader("Завантажте CSV файл з каналами зв'язку", type="csv")
+    # 1. Створюємо поле для завантаження файлу користувачем
+    uploaded_file = st.file_uploader("Завантажте власний CSV файл з каналами зв'язку (необов'язково)", type="csv")
     
+    # Визначаємо, яке джерело даних використовувати
     if uploaded_file is not None:
-        try:
-            edges = load_edges(uploaded_file)
-            graph = create_graph(edges)
-            
-            st.subheader("Таблиця каналів зв'язку:")
-            st.dataframe(edges) # Вивід таблиці на екран
-            
-            nodes = sorted(graph.nodes())
-            st.write(f"**Доступні вузли:** {', '.join(nodes)}")
-            
-            # 2. Введення даних через віджети Streamlit (замість input)
-            start_node = st.text_input("Введіть початковий вузол:").strip()
-            end_node = st.text_input("Введіть кінцевий вузол:").strip()
-            
-            # 3. Кнопка для запуску розрахунків
-            if st.button("Знайти маршрут"):
-                if start_node and end_node:
-                    path, weight = find_optimal_route(graph, start_node, end_node)
-                    
-                    st.success(f"Оптимальний маршрут: {' -> '.join(path)}")
-                    st.info(f"Сумарна вага маршруту: {weight:g}")
-                    
-                    # 4. Вивід графіків (замість збереження у файл і print)
-                    st.subheader("Схема мережі")
-                    draw_network(graph, "temp1.png", title="Початкова мережа")
-                    st.image("temp1.png") # Показуємо зображення у браузері
-                    
-                    st.subheader("Оптимальний маршрут")
-                    draw_network(graph, "temp2.png", route=path, title="Знайдений маршрут")
-                    st.image("temp2.png")
-                else:
-                    st.warning("Будь ласка, введіть початковий та кінцевий вузли.")
-                    
-        except Exception as error:
-            st.error(f"Сталася помилка: {error}")
+        # Якщо користувач завантажив свій файл, беремо його
+        data_source = uploaded_file
+        st.info("Використовується завантажений вами файл.")
+    else:
+        # Якщо користувач нічого не завантажив, перевіряємо наявність вбудованого файлу
+        if os.path.exists(DEFAULT_CSV):
+            data_source = DEFAULT_CSV
+            st.success(f"Автоматично завантажено вбудований файл мережі (`{DEFAULT_CSV}`).")
+        else:
+            st.error(f"Помилка: Вбудований файл `{DEFAULT_CSV}` не знайдено в репозиторії, і жодного файлу не було завантажено.")
+            return
+
+    try:
+        # Завантажуємо дані з обраного джерела
+        edges = load_edges(data_source)
+        graph = create_graph(edges)
+        
+        # Відображаємо таблицю з даними
+        st.subheader("Таблиця каналів зв'язку:")
+        st.dataframe(edges, use_container_width=True)
+        
+        # Список доступних вузлів
+        nodes = sorted(graph.nodes())
+        st.write(f"**Доступні вузли в мережі:** {', '.join(nodes)}")
+        
+        # Введення точок маршруту
+        st.subheader("Параметри маршрутизації")
+        start_node = st.text_input("Введіть початковий вузол (наприклад, A):").strip()
+        end_node = st.text_input("Введіть кінцевий вузол (наприклад, F):").strip()
+        
+        if st.button("Розрахувати оптимальний маршрут", type="primary"):
+            if start_node and end_node:
+                path, weight = find_optimal_route(graph, start_node, end_node)
+                
+                # Вивід результатів
+                st.success(f"🏁 **Оптимальний маршрут:** {' ➡️ '.join(path)}")
+                st.info(f"📊 **Сумарна вага (вартість/відстань) маршруту:** {weight:g}")
+                
+                # Генерація та відображення графіків
+                st.subheader("🗺️ Візуалізація мережі")
+                
+                # Графік 1: Початкова мережа
+                draw_network(graph, "temp_initial.png", title="Початкова мережа з вагами каналів")
+                st.image("temp_initial.png", caption="Загальна схема каналів зв'язку")
+                
+                # Графік 2: Виділений маршрут
+                draw_network(graph, "temp_route.png", route=path, title=f"Оптимальний маршрут: {' -> '.join(path)}")
+                st.image("temp_route.png", caption="Червоним кольором виділено найкоротший шлях")
+            else:
+                st.warning("⚠️ Будь ласка, вкажіть і початковий, і кінцевий вузли для розрахунку.")
+                
+    except Exception as error:
+        st.error(f"❌ Сталася помилка при обробці даних: {error}")
 
 if __name__ == "__main__":
     main()
